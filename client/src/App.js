@@ -5,7 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Username from "./Components/Username";
 import Password from "./Components/password";
 import PageNotFound from "./Components/PageNotFound";
-import Rest from "./Components/Rest";
+import Reset from "./Components/Rest";
 import Register from "./Components/Register";
 import Profile from "./Components/Profile";
 import Recovery from "./Components/Recovery";
@@ -26,7 +26,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/*",
-    element: <Rest></Rest>,
+    element: <Reset></Reset>,
   },
   {
     path: "/",
