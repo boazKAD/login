@@ -1,70 +1,81 @@
 import UserModel from "../model/user.model.js";
 import bcrypt from "bcrypt";
+import ENV from "../config.js";
+import jwt from "jsonwebtoken";
 
 // http://localhost:8080/api/register
 
 export async function register(req, res) {
-    try {
-        const { username, password, email, profile } = req.body;
-    
-        const existUsername = UserModel.findOne({ username }).exec();
-    
-        const existEmail = UserModel.findOne({ email }).exec();
-    
-        Promise.all([existUsername, existEmail])
-          .then(([usernameResult, emailResult]) => {
-            if (usernameResult) {
-              throw { error: "Please use a unique username" };
-            }
-            if (emailResult) {
-              throw { error: "Please use a unique email" };
-            }
-    
-            if (password) {
-              bcrypt
-                .hash(password, 10)
-                .then((hashPassword) => {
-                  const user = new UserModel({
-                    username,
-                    password: hashPassword,
-                    email,
-                    profile: profile || "",
-                  });
-                  user
-                    .save()
-                    .then((result) =>
-                      res.status(201).send({ message: "User registered successfully" })
-                    )
-                    .catch((error) => {
-                      console.error(error);
-                      res.status(500).send(error);
-                    });
-                })
-                .catch((error) => {
-                  console.error(error);
-                  res.status(500).send({
-                    error: "Unable to hash the password",
-                  });
-                });
-            }
-          })
-          .catch((error) => {
-            console.error(error);
-            res.status(500).send(error);
-          });
-      } catch (error) {
-        console.error(error);
-        res.status(500).send(error);
-      }
+  const { username, password, email, profile } = req.body;
+  try {
+    const existingUser = await UserModel.findOne({
+      $or: [{ email: email }, { username: username }],
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
+        message: 'Email or username already exists. Please choose a different one.',
+      });
     }
+    const hashedPassword = await bcrypt.hash(password, 10);
     
+    const newUser = new UserModel({
+      username,
+      password:hashedPassword,
+      email,
+      profile,
+    });
+
+e
+    const result = await newUser.save();
+
+    return res.status(201).json({ message: 'User registered successfully.', result });
+  } catch (err) {
+    console.error('Error registering user:', err);
+    return res.status(500).send('Internal Server Error');
+  }
+}
+
 // http://localhost:8080/api/login
 export async function login(req, res) {
-  res.json("login routes ");
+
+  try {
+    const { username, password } = req.body;
+
+    const user = await UserModel.findOne({ username });
+
+    if (!user) {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).send({ error: "Invalid password" });
+    }
+    const token = jwt.sign({ userId: user._id },  ENV.JWT_SECRET, { expiresIn: '24h' });
+
+    return res.status(200).send({
+      msg: "Login Successful...!",
+      token: token
+    });
+  } catch (err) {
+    console.error('Error logging user:', err);
+    return res.status(500).send('Internal Server Error');
+  }
 }
+
 // http://localhost:8080/api/user/username
 export async function getUser(req, res) {
-  res.json("get user routes ");
+  try {
+    const { userName } = req.params;
+    const result = await UserModel.find({ username: userName});
+    
+    return res.status(200).send({ msg : 'success' , result })
+  } catch (error) {
+    console.log('error finding user by username', error);
+    return res.status(500).send('Internal Server Error'); 
+  }
 }
 // http://localhost:8080/api/updateUser
 export async function updateUser(req, res) {
