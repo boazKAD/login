@@ -3,6 +3,23 @@ import bcrypt from "bcrypt";
 import ENV from "../config.js";
 import jwt from "jsonwebtoken";
 
+//  middleware
+export async function verifyUser(req, res, next) {
+  try {
+    const { username } = req.method === "GET" ? req.query : req.body;
+
+    const user = await UserModel.findOne({ username });
+
+    if (!user) {
+      return res.status(404).send({ error: "User not found" });
+    }
+    next();
+  } catch (err) {
+    console.error("Error checking username:", err);
+    return res.status(500).send("Internal Server Error");
+  }
+}
+
 // http://localhost:8080/api/register
 
 export async function register(req, res) {
@@ -14,31 +31,31 @@ export async function register(req, res) {
 
     if (existingUser) {
       return res.status(409).json({
-        message: 'Email or username already exists. Please choose a different one.',
+        message:
+          "Email or username already exists. Please choose a different one.",
       });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     const newUser = new UserModel({
       username,
-      password:hashedPassword,
+      password: hashedPassword,
       email,
       profile,
     });
-
-e
     const result = await newUser.save();
 
-    return res.status(201).json({ message: 'User registered successfully.', result });
+    return res
+      .status(201)
+      .json({ message: "User registered successfully.", result });
   } catch (err) {
-    console.error('Error registering user:', err);
-    return res.status(500).send('Internal Server Error');
+    console.error("Error registering user:", err);
+    return res.status(500).send("Internal Server Error");
   }
 }
 
 // http://localhost:8080/api/login
 export async function login(req, res) {
-
   try {
     const { username, password } = req.body;
 
@@ -53,15 +70,18 @@ export async function login(req, res) {
     if (!isPasswordValid) {
       return res.status(401).send({ error: "Invalid password" });
     }
-    const token = jwt.sign({ userId: user._id },  ENV.JWT_SECRET, { expiresIn: '24h' });
+    const expiresIn = "24h"; // Token expiration time
+
+    const token = jwt.sign({ userId: user._id }, ENV.JWT_SECRET, { expiresIn });
 
     return res.status(200).send({
       msg: "Login Successful...!",
-      token: token
+      username: user.username,
+      token: token,
     });
   } catch (err) {
-    console.error('Error logging user:', err);
-    return res.status(500).send('Internal Server Error');
+    console.error("Error logging user:", err);
+    return res.status(500).send("Internal Server Error");
   }
 }
 
@@ -69,17 +89,41 @@ export async function login(req, res) {
 export async function getUser(req, res) {
   try {
     const { userName } = req.params;
-    const result = await UserModel.find({ username: userName});
-    
-    return res.status(200).send({ msg : 'success' , result })
+    const result = await UserModel.find({ username: userName }).select(
+      "-password"
+    );
+
+    if (result.length === 0) {
+      return res.status(404).send({ error: "User not found" });
+    }
+
+    return res.status(200).send({ msg: "success", result });
   } catch (error) {
-    console.log('error finding user by username', error);
-    return res.status(500).send('Internal Server Error'); 
+    console.log("error finding user by username", error);
+    return res.status(500).send("Internal Server Error");
   }
 }
 // http://localhost:8080/api/updateUser
 export async function updateUser(req, res) {
-  res.json("update user  routes ");
+  const { username, fistName, lastName, mobile, address, profile } = req.body;
+  try {
+    const { id } = req.params;
+    const result = await UserModel.findOneAndUpdate(
+      { _id: id },
+      { username, fistName, lastName, mobile, address, profile },
+      { new: true }
+    ) . select('-password');
+    if (!result) {
+      return res.status(404).send({ error: "User not found" });
+    }
+    return res.status(200).send({ msg: "success", result });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).send({ error: "Invalid user ID" });
+    }
+    console.log(error);
+    return res.status(500).send("Internal Server Error");
+  }
 }
 // http://localhost:8080/api/generateOTP
 export async function generateOTP(req, res) {

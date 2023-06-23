@@ -1,4 +1,5 @@
 import { Router } from "express";
+import {auth} from "../middleware/auth.js";
 
 import * as controllers from "../controllers/appController.js";
 
@@ -7,7 +8,7 @@ const router= Router();
 router.route('/register').post(controllers.register); 
 // router.route('/registerMail').post();// send the email 
 router.route('/authentication').post((req,res) => res.end());
-router.route('/login').post(controllers.login);
+router.route('/login').post( controllers.verifyUser,controllers.login);
 
 //get methods
 
@@ -17,7 +18,7 @@ router.route('/verifyOTP').get(controllers.verifyOTP);
 router.route('/createResetSession').get(controllers.createResetSession);
 // put method
 
-router.route('/updateUser').put(controllers.updateUser);
+router.route('/updateUser/:id').put(auth, controllers.updateUser);
 router.route('/resetPassword').put(controllers.resetPassword);
 
 
