@@ -1,5 +1,5 @@
 import express from "express";
-import cors from "cors";
+import colors from "colors";
 import morgan from "morgan";
 import dotenv from "dotenv";
 import bodyParser from "body-parser";
@@ -20,7 +20,7 @@ const PORT = process.env.PORT;
 const server = () => {
     
   app.listen(PORT, () => {
-    console.log(`Server connected to  http://localhost:${PORT}`);
+    console.log(`Server connected to  http://localhost:${PORT}`.blue.bold);
   });
 };
 server();
